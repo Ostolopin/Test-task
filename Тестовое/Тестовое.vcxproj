@@ -104,12 +104,12 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;GLFW_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\vs studio\lib\glew-2.1.0\glew-2.1.0\include;D:\vs studio\lib\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\include;D:\vs studio\lib\glm-master\glm-master</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\vs studio\lib\glew-2.1.0\glew-2.1.0\glew-2.1.0\include;D:\vs studio\lib\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\include;D:\vs studio\lib\glm-master\glm-master\glm-master;D:\vs studio\lib\h</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>D:\vs studio\lib\glew-2.1.0\glew-2.1.0\lib;D:\vs studio\lib\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\lib-vc2022</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>D:\vs studio\lib\glew-2.1.0\glew-2.1.0\glew-2.1.0\lib;D:\vs studio\lib\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\lib-vc2022</AdditionalLibraryDirectories>
       <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);glew32.lib;opengl32.lib;glfw3.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
