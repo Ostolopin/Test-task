@@ -102,9 +102,10 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;GLFW_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;GLFW_STATIC;USE_STD_FILESYSTEM;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\vs studio\lib\glew-2.1.0\glew-2.1.0\glew-2.1.0\include;D:\vs studio\lib\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\include;D:\vs studio\lib\glm-master\glm-master\glm-master;D:\vs studio\lib\h;D:\vs studio\lib\eigen-3.4.0</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\vs studio\lib\glew-2.1.0\glew-2.1.0\glew-2.1.0\include;D:\vs studio\lib\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\include;D:\vs studio\lib\glm-master\glm-master\glm-master;D:\vs studio\lib\h;D:\vs studio\lib\eigen-3.4.0;D:\vs studio\lib\imgui-master;D:\vs studio\lib\ImGuiFileDialog-master</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -130,7 +131,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\lib\h\ImGuiFileDialog.cpp" />
+    <ClCompile Include="..\..\lib\imgui-master\imgui-master\backends\imgui_impl_glfw.cpp" />
+    <ClCompile Include="..\..\lib\imgui-master\imgui-master\backends\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="..\..\lib\imgui-master\imgui-master\imgui.cpp" />
+    <ClCompile Include="..\..\lib\imgui-master\imgui-master\imgui_draw.cpp" />
+    <ClCompile Include="..\..\lib\imgui-master\imgui-master\imgui_tables.cpp" />
+    <ClCompile Include="..\..\lib\imgui-master\imgui-master\imgui_widgets.cpp" />
     <ClCompile Include="FileName.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\lib\h\ImGuiFileDialog.h" />
+    <ClInclude Include="..\..\lib\h\ImGuiFileDialogConfig.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

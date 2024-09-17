@@ -1,3 +1,11 @@
+#include "imgui.h"
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_opengl3.h"
+
+#define USE_STD_FILESYSTEM
+#include "ImGuiFileDialog.h"
+
+
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -205,10 +213,18 @@ std::vector<Section> readSections(std::ifstream& file, int N, std::streampos fil
 
 // Input processing
 void processInput(GLFWwindow* window) {
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.WantCaptureMouse) {
+        // Если ImGui хочет обработать события мыши, не обрабатываем их в 3D-сцене
+        return;
+    }
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        // Движение вперед
+    }
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        positionX -= 1.0f;
+        positionX -= 0.05f;
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        positionX += 1.0f;
+        positionX += 0.05f;
     // Check for 'C' key to create cylinder
     if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS && !cylinderCreated) {
         createCylinderModel(header); // Передаем оригинальный заголовок
@@ -231,6 +247,11 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 
 // Mouse movement callback
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.WantCaptureMouse) {
+        // Если ImGui хочет обработать события мыши, не обрабатываем их в 3D-сцене
+        return;
+    }
     if (mousePressed) {
         if (firstMouse) {
             lastX = xpos;
@@ -346,6 +367,30 @@ float minDistanceToPolygonEdge(const std::vector<std::pair<float, float>>& polyg
         }
     }
     return minDist;
+}
+
+void loadModel(const std::string& fileName) {
+    std::ifstream file(fileName, std::ios::binary);
+    if (!file.is_open()) {
+        log(ERROR, "Не удалось открыть файл: " + fileName);
+        return;
+    }
+    header = readHeader(file);
+    log(INFO, "Файл версии: " + std::to_string(header.version));
+    log(INFO, "Количество сечений: " + std::to_string(header.N));
+    file.seekg(130, std::ios::beg);
+    file.seekg(0, std::ios::end);
+    std::streampos fileSize = file.tellg();
+    file.seekg(130, std::ios::beg);
+    log(INFO, "Размер файла: " + std::to_string(fileSize) + " байт");
+    sections = readSections(file, header.N, fileSize);
+    file.close();
+
+    // Пересоздаем буферы для новой модели
+    size_t BZ = createBuffersFromSections();
+
+    // Сбрасываем состояние цилиндра
+    cylinderCreated = false;
 }
 
 void findMaxInscribedCircle(const CenteredSection& section, float& centerX, float& centerY, float& radius) {
@@ -973,6 +1018,12 @@ int main() {
     GLFWwindow* window = glfwCreateWindow(800, 600, "3D Object Viewer", nullptr, nullptr);
     if (!window) {
         log(ERROR, "Failed to create GLFW window");
+
+        // Cleanup ImGui
+        ImGui_ImplOpenGL3_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
+        ImGui::DestroyContext();
+
         glfwTerminate();
         return -1;
     }
@@ -981,6 +1032,17 @@ int main() {
         log(ERROR, "Failed to initialize GLEW");
         return -1;
     }
+
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    // Setup Platform/Renderer backends
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 130"); // Версию GLSL может потребоваться изменить
+
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
     glfwSetScrollCallback(window, scroll_callback);
@@ -996,19 +1058,45 @@ int main() {
     size_t BZ = createBuffersFromSections();
     glEnable(GL_DEPTH_TEST);
     while (!glfwWindowShouldClose(window)) {
+        // Обработка событий
+        glfwPollEvents();
+
+        // Обработка ввода
         processInput(window);
+
+        // Начало нового кадра ImGui
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        // Получаем размеры окна
+        int display_w, display_h;
+        glfwGetFramebufferSize(window, &display_w, &display_h);
+
+        // Вычисляем размеры для 3D-рендеринга и GUI
+        float guiWidth = 300.0f; // Ширина GUI-меню
+        float renderWidth = static_cast<float>(display_w) - guiWidth;
+        float renderHeight = static_cast<float>(display_h);
+
+        // Устанавливаем область просмотра для 3D-рендеринга
+        glViewport(0, 0, static_cast<int>(renderWidth), static_cast<int>(renderHeight));
+
+        // Очищаем экран
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Set wireframe mode
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        // Рендеринг 3D-сцены
+        glUseProgram(shaderProgram);
 
+        // Установка матриц и других uniform-переменных
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(positionX, 0.0f, 0.0f));
         model = glm::rotate(model, rotationX, glm::vec3(1.0f, 0.0f, 0.0f));
         model = glm::rotate(model, rotationY, glm::vec3(0.0f, 1.0f, 0.0f));
         model = glm::scale(model, glm::vec3(scale, scale, scale));
+
         glm::mat4 view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -500.0f));
-        glm::mat4 projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 1000.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(45.0f), renderWidth / renderHeight, 0.1f, 1000.0f);
+
         GLuint modelLoc = glGetUniformLocation(shaderProgram, "model");
         GLuint viewLoc = glGetUniformLocation(shaderProgram, "view");
         GLuint projectionLoc = glGetUniformLocation(shaderProgram, "projection");
@@ -1018,25 +1106,79 @@ int main() {
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-        // Render original model
-        glUniform4f(colorLoc, 1.0f, 1.0f, 1.0f, 1.0f); // White color
+        // Устанавливаем режим полигонов для модели
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Режим каркаса (wireframe)
+
+        // Рендеринг оригинальной модели
+        glUniform4f(colorLoc, 1.0f, 1.0f, 1.0f, 1.0f); // Белый цвет
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(BZ / 3));
         glBindVertexArray(0);
 
-        // Render cylinder model if created
+        // Рендеринг цилиндра, если он создан
         if (cylinderCreated) {
-            glUniform4f(colorLoc, 1.0f, 0.0f, 0.0f, 1.0f); // Red color
+            // Устанавливаем режим полигонов для цилиндра
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Режим заполнения
+            glUniform4f(colorLoc, 1.0f, 0.0f, 0.0f, 1.0f); // Красный цвет
             glBindVertexArray(cylinderVAO);
-            // Исправлено: добавлен расчет количества вершин
             size_t numVertices = (cylinderSections.size() - 1) * numSegments * 6 + numSegments * 6 * 2;
             glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(numVertices));
             glBindVertexArray(0);
+
+            // Возвращаем режим полигонов для дальнейшего рендеринга
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         }
 
+        // Устанавливаем область просмотра для GUI
+        glViewport(0, 0, display_w, display_h);
+
+        // Создаем окно GUI
+        ImGui::SetNextWindowPos(ImVec2(renderWidth, 0), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(guiWidth, renderHeight), ImGuiCond_Always);
+        ImGui::Begin("Menu", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+
+        // Элементы GUI
+        if (ImGui::Button("Open File")) {
+            // Открываем диалог выбора файла
+            ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey", "Выберите файл", ".lprf");
+        }
+
+        // Отображаем диалог выбора файла
+        if (ImGuiFileDialog::Instance()->Display("ChooseFileDlgKey")) {
+            if (ImGuiFileDialog::Instance()->IsOk()) {
+                std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
+                std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+
+                // Загружаем модель из выбранного файла
+                loadModel(filePathName);
+            }
+            ImGuiFileDialog::Instance()->Close();
+        }
+
+        // Дополнительные элементы управления (по желанию)
+        ImGui::Text("Управление камерой:");
+        ImGui::SliderFloat("Поворот по X", &rotationX, -3.14f, 3.14f);
+        ImGui::SliderFloat("Поворот по Y", &rotationY, -3.14f, 3.14f);
+        ImGui::SliderFloat("Масштаб", &scale, 0.1f, 10.0f);
+        ImGui::SliderFloat("Смещение по X", &positionX, -100.0f, 100.0f);
+
+        ImGui::End();
+
+        // Завершаем рендеринг ImGui и отображаем его
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        // Обмен буферов
         glfwSwapBuffers(window);
-        glfwPollEvents();
     }
+
+
+
+    // Cleanup ImGui
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
     glfwTerminate();
     logFile.close();
     return 0;
